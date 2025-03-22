@@ -4,6 +4,7 @@ import json
 import pytesseract
 from PIL import Image
 import Levenshtein
+import concurrent.futures
 
 class GenshinArtifactOcr:
 
@@ -36,46 +37,30 @@ class GenshinArtifactOcr:
 
             ocr_result = {}
 
-            # Perform OCR on ArtifactName region
-            if "ArtifactName_x1" in self.config:
-                x1, y1, x2, y2 = self.config["ArtifactName_x1"], self.config["ArtifactName_y1"], self.config["ArtifactName_x2"], self.config["ArtifactName_y2"]
-                artifact_name_img = img.crop((x1, y1, x2, y2))
+            def ocr_artifact_name(artifact_name_img, config, artifact_names, artifact_name_map, levenshtein_distance):
                 ocr_text = pytesseract.image_to_string(artifact_name_img, lang='jpn', config='--psm 6')
                 artifact_name = ocr_text.strip()
 
                 # Find the closest match
-                if self.artifact_names:
-                    closest_name = min(self.artifact_names, key=lambda x: self.levenshtein_distance(artifact_name, x))
-                    ocr_result["ArtifactName"] = closest_name
-                    ocr_result["Position"] = self.artifact_name_map[closest_name]
+                if artifact_names:
+                    closest_name = min(artifact_names, key=lambda x: levenshtein_distance(artifact_name, x))
+                    artifact_name_result = {"ArtifactName": closest_name, "Position": artifact_name_map[closest_name], "RawArtifactName": artifact_name}
                 else:
-                    ocr_result["ArtifactName"] = artifact_name
+                    artifact_name_result = {"ArtifactName": artifact_name, "RawArtifactName": artifact_name}
                     #return {"error": f"No artifact names found in {self.artifact_names_path}"}
-                ocr_result["RawArtifactName"] = artifact_name
+                return artifact_name_result
 
-            # Perform OCR on MainType region
-            if "MainType_x1" in self.config:
-                x1, y1, x2, y2 = self.config["MainType_x1"], self.config["MainType_y1"], self.config["MainType_x2"], self.config["MainType_y2"]
-                main_type_img = img.crop((x1, y1, x2, y2))
+            def ocr_main_type(main_type_img, config, stat_types, get_closest_stat_type):
                 main_type = pytesseract.image_to_string(main_type_img, lang='jpn', config='--psm 6').strip()
-                closest_main_type = self.get_closest_stat_type(main_type, stat_types)
-                ocr_result["Main"] = {"Type": closest_main_type}
-                ocr_result["RawMainType"] = main_type
+                closest_main_type = get_closest_stat_type(main_type, stat_types)
+                return {"Main": {"Type": closest_main_type}, "RawMainType": main_type}
 
-            # Perform OCR on MainValue region
-            if "MainValue_x1" in self.config:
-                x1, y1, x2, y2 = self.config["MainValue_x1"], self.config["MainValue_y1"], self.config["MainValue_x2"], self.config["MainValue_y2"]
-                main_value_img = img.crop((x1, y1, x2, y2))
+            def ocr_main_value(main_value_img, config):
                 main_value = pytesseract.image_to_string(main_value_img, lang='jpn', config='--psm 6').strip()
                 is_percent = "%" in main_value
-                ocr_result["Main"]["Value"] = main_value.replace("%", "")
-                ocr_result["Main"]["Persent"] = is_percent
-                ocr_result["RawMainValue"] = main_value
+                return {"Main": {"Value": main_value.replace("%", ""), "Persent": is_percent}, "RawMainValue": main_value}
 
-           # Perform OCR on Sub region
-            if "Sub_x1" in self.config:
-                x1, y1, x2, y2 = self.config["Sub_x1"], self.config["Sub_y1"], self.config["Sub_x2"], self.config["Sub_y2"]
-                sub_img = img.crop((x1, y1, x2, y2))
+            def ocr_sub(sub_img, config, stat_types, get_closest_stat_type):
                 sub_text = pytesseract.image_to_string(sub_img, lang='jpn', config='--psm 6')
                 sub_stats = []
                 for line in sub_text.splitlines():
@@ -86,23 +71,44 @@ class GenshinArtifactOcr:
                             stat_type = parts[0].replace("・", "").strip()
                             stat_value = parts[1].replace("%", "").strip()
                             is_percent = "%" in parts[1]
-                            closest_stat_type = self.get_closest_stat_type(stat_type, stat_types)
+                            closest_stat_type = get_closest_stat_type(stat_type, stat_types)
                             sub_stats.append({"Type": closest_stat_type, "Value": stat_value, "Persent": is_percent})
-                ocr_result["Sub"] = sub_stats
-                ocr_result["RawSub"] = sub_text
+                    return {"Sub": sub_stats, "RawSub": sub_text}
 
-            # Perform OCR on Level region
-            if "Level_x1" in self.config:
-                x1, y1, x2, y2 = self.config["Level_x1"], self.config["Level_y1"], self.config["Level_x2"], self.config["Level_y2"]
-                level_img = img.crop((x1, y1, x2, y2))
+            def ocr_level(level_img, config):
                 level = pytesseract.image_to_string(level_img, lang='jpn', config='--psm 6').strip()
                 level = level.replace("+", "").replace("o", "0").replace("O", "0")
                 try:
                     level = int(level)
                 except ValueError:
                     level = 0
-                ocr_result["Level"] = level
-                ocr_result["RawLevel"] = level
+                return {"Level": level, "RawLevel": level}
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = {}
+                if "ArtifactName_x1" in self.config:
+                    x1, y1, x2, y2 = self.config["ArtifactName_x1"], self.config["ArtifactName_y1"], self.config["ArtifactName_x2"], self.config["ArtifactName_y2"]
+                    artifact_name_img = img.crop((x1, y1, x2, y2))
+                    futures["future_artifact_name"] = executor.submit(ocr_artifact_name, artifact_name_img, self.config, self.artifact_names, self.artifact_name_map, self.levenshtein_distance)
+                if "MainType_x1" in self.config:
+                    x1, y1, x2, y2 = self.config["MainType_x1"], self.config["MainType_y1"], self.config["MainType_x2"], self.config["MainType_y2"]
+                    main_type_img = img.crop((x1, y1, x2, y2))
+                    futures["future_main_type"] = executor.submit(ocr_main_type, main_type_img, self.config, stat_types, self.get_closest_stat_type)
+                if "MainValue_x1" in self.config:
+                    x1, y1, x2, y2 = self.config["MainValue_x1"], self.config["MainValue_y1"], self.config["MainValue_x2"], self.config["MainValue_y2"]
+                    main_value_img = img.crop((x1, y1, x2, y2))
+                    futures["future_main_value"] = executor.submit(ocr_main_value, main_value_img, self.config)
+                if "Sub_x1" in self.config:
+                    x1, y1, x2, y2 = self.config["Sub_x1"], self.config["Sub_y1"], self.config["Sub_x2"], self.config["Sub_y2"]
+                    sub_img = img.crop((x1, y1, x2, y2))
+                    futures["future_sub"] = executor.submit(ocr_sub, sub_img, self.config, stat_types, self.get_closest_stat_type)
+                if "Level_x1" in self.config:
+                    x1, y1, x2, y2 = self.config["Level_x1"], self.config["Level_y1"], self.config["Level_x2"], self.config["Level_y2"]
+                    level_img = img.crop((x1, y1, x2, y2))
+                    futures["future_level"] = executor.submit(ocr_level, level_img, self.config)
+
+                for future_name, future in futures.items():
+                    ocr_result.update(future.result())
 
             from calculation import Calculation
             calculator = Calculation()
@@ -131,6 +137,7 @@ class GenshinArtifactOcr:
             if ocr_result["Level"] == 20:
                 if not artifact_exists(ocr_result):
                     # Save artifact info to file
+                    closest_name = ocr_result["ArtifactName"]
                     filename = f"{closest_name}_{time.strftime('%Y%m%d%H%M%S')}.json"
                     filepath = os.path.join("artifactDB", "artifact_data", filename)
                     os.makedirs(os.path.join("artifactDB", "artifact_data"), exist_ok=True)
