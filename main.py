@@ -198,7 +198,7 @@ class App(tk.Tk):
 
                     try:
                         dbImge = Image.open(artifact["thumbnail"])
-                        dbImge.thumbnail((150, 150))
+                        dbImge.thumbnail((200, 200))
                         dbPhoto = ImageTk.PhotoImage(dbImge)
                         artifact_label = ttk.Label(similar_box, text=artifact_text, font=("Courier New", 8), anchor=tk.W)
                         artifact_label.pack(side=tk.RIGHT)

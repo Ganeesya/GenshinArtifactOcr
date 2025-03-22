@@ -164,19 +164,30 @@ class Calculation:
         return future_stats
     
     def getScoreList(self, future_stat, artifact_data):
+        show_score_type = {
+              "攻撃力":"ATK",
+              "防御力":"DEF",
+              "HP":"HP ",
+              "元素熟知":"ELE",
+              "元素チャージ効率":"CHG"
+            }
+        main_type = artifact_data["Main"]["Type"]
+        main_type_raw = artifact_data["RawMainType"]
         if int( artifact_data.get("Level", 0)) == 20:
-            ret = f"\t\t: score\n"
+            ret = f"{main_type} : {main_type_raw}\n"
+            ret += f"   : score\n"
             for score_type, score in future_stat.items():
                 scoreValue = score["score"]
-                ret += f"{self.align_right_with_space(score_type,16)}: {scoreValue:5.1f}\n"
+                ret += f"{show_score_type[score_type]}: {scoreValue:5.1f}\n"
             return ret
         else:
-            ret = f"\t\t: score\t: ave\t: max\n"
+            ret = f"{main_type} : {main_type_raw}\n"
+            ret += f"   : score\t: ave\t: max\n"
             for score_type, score in future_stat.items():
                 scoreValue = score["score"]
                 scoreAve = score["average"]
                 scoreMax = score["max"]
-                ret += f"{self.align_right_with_space(score_type,16)}: {scoreValue:5.1f} : {scoreAve:5.1f} : {scoreMax:5.1f}\n"
+                ret += f"{show_score_type[score_type]}: {scoreValue:5.1f} : {scoreAve:5.1f} : {scoreMax:5.1f}\n"
             return ret
 
     def get_artifact_data(self, image_path):
