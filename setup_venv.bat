@@ -1,0 +1,9 @@
+@echo off
+echo 仮想環境を作成しています...
+python -m venv venv
+echo 仮想環境をアクティベートしています...
+call venv\Scripts\activate
+echo 必要なパッケージをインストールしています...
+pip install -r requirements.txt
+echo 完了しました。
+pause

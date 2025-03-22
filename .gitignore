@@ -1,0 +1,7 @@
+screenshot_*.png
+/testData
+/Scripts
+/.venv
+/__pycache__
+/artifactDB
+/ocrSetting
