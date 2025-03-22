@@ -49,8 +49,8 @@ class AnnotationTool(tk.Tk):
         self.sub_stats_button = ttk.Button(self.config_buttons_frame, text="Sub Stats", command=lambda: self.set_config_mode("Sub"))
         self.sub_stats_button.pack(side=tk.LEFT, padx=5)
         style = ttk.Style()
-        style.configure("Green.TButton", foreground="green")
-        self.sub_stats_button.configure(style="Green.TButton")
+        style.configure("Purple.TButton", foreground="purple")
+        self.sub_stats_button.configure(style="Purple.TButton")
         self.sub_stats_label = ttk.Label(self.config_buttons_frame, text="")
         self.sub_stats_label.pack(side=tk.LEFT, padx=5)
 
@@ -95,7 +95,7 @@ class AnnotationTool(tk.Tk):
             if "MainValue_x1" in self.config and "MainValue_y1" in self.config and "MainValue_x2" in self.config and "MainValue_y2" in self.config:
                 self.rect_ids["MainValue"] = self.canvas.create_rectangle(self.config["MainValue_x1"], self.config["MainValue_y1"], self.config["MainValue_x2"], self.config["MainValue_y2"], outline="blue")
             if "Sub_x1" in self.config and "Sub_y1" in self.config and "Sub_x2" in self.config and "Sub_y2" in self.config:
-                self.rect_ids["Sub"] = self.canvas.create_rectangle(self.config["Sub_x1"], self.config["Sub_y1"], self.config["Sub_x2"], self.config["Sub_y2"], outline="green")
+                self.rect_ids["Sub"] = self.canvas.create_rectangle(self.config["Sub_x1"], self.config["Sub_y1"], self.config["Sub_x2"], self.config["Sub_y2"], outline="purple")
             if "Level_x1" in self.config and "Level_y1" in self.config and "Level_x2" in self.config and "Level_y2" in self.config:
                 self.rect_ids["Level"] = self.canvas.create_rectangle(self.config["Level_x1"], self.config["Level_y1"], self.config["Level_x2"], self.config["Level_y2"], outline="yellow")
             if "Position_x1" in self.config and "Position_y1" in self.config and "Position_x2" in self.config and "Position_y2" in self.config:
@@ -145,7 +145,7 @@ class AnnotationTool(tk.Tk):
             elif self.config_mode == "MainValue":
                 outline_color = 'blue'
             elif self.config_mode == "Sub":
-                outline_color = 'green'
+                outline_color = 'purple'
             elif self.config_mode == "Level":
                 outline_color = 'yellow'
             elif self.config_mode == "Position":
