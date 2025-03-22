@@ -13,11 +13,9 @@ class GenshinArtifactOcr:
         self.artifact_names_path = artifact_names_path
         with open(self.config_path, "r", encoding="utf-8") as f:
             self.config = json.load(f)
-        with open(self.artifact_names_path, "r", encoding="utf-8") as f:
-            self.artifact_names = [line.strip() for line in f]
         with open(artifact_names_path, "r", encoding="utf-8") as f:
             self.artifact_name_map = json.load(f)
-        self.artifact_names = list(self.artifact_name_map.keys())
+        self.position_names = list(self.artifact_name_map.keys())
 
     def levenshtein_distance(self, s1, s2):
         return Levenshtein.distance(s1, s2)
@@ -37,17 +35,27 @@ class GenshinArtifactOcr:
 
             ocr_result = {}
 
-            def ocr_artifact_name(artifact_name_img, config, artifact_names, artifact_name_map, levenshtein_distance):
+            def ocr_artifact_name(artifact_name_img, config, artifact_name_map, levenshtein_distance, position_img):
+                position_text = ""
+                position = "生の花" # default value
+                if position_img != None:
+                    position_text = pytesseract.image_to_string(position_img, lang='jpn', config='--psm 6')
+                    position = min(self.position_names, key=lambda x: levenshtein_distance(position_text, x))
+
                 ocr_text = pytesseract.image_to_string(artifact_name_img, lang='jpn', config='--psm 6')
                 artifact_name = ocr_text.strip()
 
                 # Find the closest match
+                closest_name = artifact_name
+                
+                artifact_names = []
+                if position in artifact_name_map:
+                    artifact_names = artifact_name_map[position]
+
                 if artifact_names:
                     closest_name = min(artifact_names, key=lambda x: levenshtein_distance(artifact_name, x))
-                    artifact_name_result = {"ArtifactName": closest_name, "Position": artifact_name_map[closest_name], "RawArtifactName": artifact_name}
-                else:
-                    artifact_name_result = {"ArtifactName": artifact_name, "RawArtifactName": artifact_name}
-                    #return {"error": f"No artifact names found in {self.artifact_names_path}"}
+                
+                artifact_name_result = {"ArtifactName": closest_name, "Position": position, "RawArtifactName": artifact_name}
                 return artifact_name_result
 
             def ocr_main_type(main_type_img, config, stat_types, get_closest_stat_type):
@@ -73,7 +81,7 @@ class GenshinArtifactOcr:
                             is_percent = "%" in parts[1]
                             closest_stat_type = get_closest_stat_type(stat_type, stat_types)
                             sub_stats.append({"Type": closest_stat_type, "Value": stat_value, "Persent": is_percent})
-                    return {"Sub": sub_stats, "RawSub": sub_text}
+                return {"Sub": sub_stats, "RawSub": sub_text}
 
             def ocr_level(level_img, config):
                 level = pytesseract.image_to_string(level_img, lang='jpn', config='--psm 6').strip()
@@ -89,7 +97,11 @@ class GenshinArtifactOcr:
                 if "ArtifactName_x1" in self.config:
                     x1, y1, x2, y2 = self.config["ArtifactName_x1"], self.config["ArtifactName_y1"], self.config["ArtifactName_x2"], self.config["ArtifactName_y2"]
                     artifact_name_img = img.crop((x1, y1, x2, y2))
-                    futures["future_artifact_name"] = executor.submit(ocr_artifact_name, artifact_name_img, self.config, self.artifact_names, self.artifact_name_map, self.levenshtein_distance)
+                    position_img = None                    
+                    if "Position_x1" in self.config and "Position_y1" in self.config and "Position_x2" in self.config and "Position_y2" in self.config:
+                        px1, py1, px2, py2 = self.config["Position_x1"], self.config["Position_y1"], self.config["Position_x2"], self.config["Position_y2"]
+                        position_img = img.crop((px1, py1, px2, py2))
+                    futures["future_artifact_name"] = executor.submit(ocr_artifact_name, artifact_name_img, self.config, self.artifact_name_map, self.levenshtein_distance, position_img)
                 if "MainType_x1" in self.config:
                     x1, y1, x2, y2 = self.config["MainType_x1"], self.config["MainType_y1"], self.config["MainType_x2"], self.config["MainType_y2"]
                     main_type_img = img.crop((x1, y1, x2, y2))

@@ -62,6 +62,14 @@ class AnnotationTool(tk.Tk):
         self.level_label = ttk.Label(self.config_buttons_frame, text="")
         self.level_label.pack(side=tk.LEFT, padx=5)
 
+        self.position_button = ttk.Button(self.config_buttons_frame, text="Position", command=lambda: self.set_config_mode("Position"))
+        self.position_button.pack(side=tk.LEFT, padx=5)
+        style = ttk.Style()
+        style.configure("Orange.TButton", foreground="orange")
+        self.position_button.configure(style="Orange.TButton")
+        self.position_label = ttk.Label(self.config_buttons_frame, text="")
+        self.position_label.pack(side=tk.LEFT, padx=5)
+
         self.save_config_button = ttk.Button(self, text="Save Configuration", command=self.save_configuration)
         self.save_config_button.pack(pady=5)
 
@@ -90,6 +98,8 @@ class AnnotationTool(tk.Tk):
                 self.rect_ids["Sub"] = self.canvas.create_rectangle(self.config["Sub_x1"], self.config["Sub_y1"], self.config["Sub_x2"], self.config["Sub_y2"], outline="green")
             if "Level_x1" in self.config and "Level_y1" in self.config and "Level_x2" in self.config and "Level_y2" in self.config:
                 self.rect_ids["Level"] = self.canvas.create_rectangle(self.config["Level_x1"], self.config["Level_y1"], self.config["Level_x2"], self.config["Level_y2"], outline="yellow")
+            if "Position_x1" in self.config and "Position_y1" in self.config and "Position_x2" in self.config and "Position_y2" in self.config:
+                self.rect_ids["Position"] = self.canvas.create_rectangle(self.config["Position_x1"], self.config["Position_y1"], self.config["Position_x2"], self.config["Position_y2"], outline="orange")
 
     def load_image(self):
         self.image_path = filedialog.askopenfilename(filetypes=[("PNG files", "*.png")])
@@ -101,6 +111,19 @@ class AnnotationTool(tk.Tk):
             self.canvas.image = self.photo  # Keep a reference!
             self.config["width"] = self.img.width
             self.config["height"] = self.img.height
+            self.load_configuration()
+            self.draw_existing_rects()
+
+    def load_configuration(self):
+        try:
+            filepath = "ocrSetting/ocr1.json"
+            with open(filepath, "r", encoding="utf-8") as f:
+                self.config = json.load(f)
+            print(f"Configuration loaded from {filepath}")
+        except FileNotFoundError:
+            print("Configuration file not found. Using default config.")
+        except json.JSONDecodeError:
+            print("Error decoding configuration file. Using default config.")
 
     def set_config_mode(self, mode):
         self.config_mode = mode
@@ -125,6 +148,8 @@ class AnnotationTool(tk.Tk):
                 outline_color = 'green'
             elif self.config_mode == "Level":
                 outline_color = 'yellow'
+            elif self.config_mode == "Position":
+                outline_color = 'orange'
             else:
                 outline_color = 'black'
 
@@ -158,6 +183,8 @@ class AnnotationTool(tk.Tk):
                 self.sub_stats_label.config(text=text)
             elif self.config_mode == "Level":
                 self.level_label.config(text=text)
+            elif self.config_mode == "Position":
+                self.position_label.config(text=text)
 
             # Reset config mode
             self.config_mode = None
