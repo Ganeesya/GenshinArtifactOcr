@@ -64,7 +64,7 @@ class GenshinArtifactOcr:
 
                 main_value = pytesseract.image_to_string(main_value_img, lang='jpn', config='--psm 6').strip()
                 is_percent = "%" in main_value
-                return {"Main": {"Type": closest_main_type, "Value": main_value.replace("%", ""), "Persent": is_percent}, "RawMainValue": main_value}
+                return {"Main": {"Type": closest_main_type, "Value": main_value.replace("%", ""), "Persent": is_percent}, "RawMainValue": main_value, "RawMainType":main_type}
 
             def ocr_sub(sub_img, config, stat_types, get_closest_stat_type):
                 sub_text = pytesseract.image_to_string(sub_img, lang='jpn', config='--psm 6')
