@@ -58,15 +58,13 @@ class GenshinArtifactOcr:
                 artifact_name_result = {"ArtifactName": closest_name, "Position": position, "RawArtifactName": artifact_name}
                 return artifact_name_result
 
-            def ocr_main_type(main_type_img, config, stat_types, get_closest_stat_type):
+            def ocr_main_type(main_type_img, main_value_img, config, stat_types, get_closest_stat_type):
                 main_type = pytesseract.image_to_string(main_type_img, lang='jpn', config='--psm 6').strip()
                 closest_main_type = get_closest_stat_type(main_type, stat_types)
-                return {"Main": {"Type": closest_main_type}, "RawMainType": main_type}
 
-            def ocr_main_value(main_value_img, config):
                 main_value = pytesseract.image_to_string(main_value_img, lang='jpn', config='--psm 6').strip()
                 is_percent = "%" in main_value
-                return {"Main": {"Value": main_value.replace("%", ""), "Persent": is_percent}, "RawMainValue": main_value}
+                return {"Main": {"Type": closest_main_type, "Value": main_value.replace("%", ""), "Persent": is_percent}, "RawMainValue": main_value}
 
             def ocr_sub(sub_img, config, stat_types, get_closest_stat_type):
                 sub_text = pytesseract.image_to_string(sub_img, lang='jpn', config='--psm 6')
@@ -102,14 +100,12 @@ class GenshinArtifactOcr:
                         px1, py1, px2, py2 = self.config["Position_x1"], self.config["Position_y1"], self.config["Position_x2"], self.config["Position_y2"]
                         position_img = img.crop((px1, py1, px2, py2))
                     futures["future_artifact_name"] = executor.submit(ocr_artifact_name, artifact_name_img, self.config, self.artifact_name_map, self.levenshtein_distance, position_img)
-                if "MainType_x1" in self.config:
+                if "MainType_x1" in self.config and "MainValue_x1" in self.config:
                     x1, y1, x2, y2 = self.config["MainType_x1"], self.config["MainType_y1"], self.config["MainType_x2"], self.config["MainType_y2"]
                     main_type_img = img.crop((x1, y1, x2, y2))
-                    futures["future_main_type"] = executor.submit(ocr_main_type, main_type_img, self.config, stat_types, self.get_closest_stat_type)
-                if "MainValue_x1" in self.config:
                     x1, y1, x2, y2 = self.config["MainValue_x1"], self.config["MainValue_y1"], self.config["MainValue_x2"], self.config["MainValue_y2"]
                     main_value_img = img.crop((x1, y1, x2, y2))
-                    futures["future_main_value"] = executor.submit(ocr_main_value, main_value_img, self.config)
+                    futures["future_main_type"] = executor.submit(ocr_main_type, main_type_img, main_value_img, self.config, stat_types, self.get_closest_stat_type)
                 if "Sub_x1" in self.config:
                     x1, y1, x2, y2 = self.config["Sub_x1"], self.config["Sub_y1"], self.config["Sub_x2"], self.config["Sub_y2"]
                     sub_img = img.crop((x1, y1, x2, y2))
