@@ -77,6 +77,7 @@ class GenshinArtifactOcr:
                         if len(parts) == 2:
                             stat_type = parts[0].replace("・", "").strip()
                             stat_value = parts[1].replace("%", "").strip()
+                            stat_value = stat_value.replace("T1.7", "11.7").strip() # よくトラブルになるケースなので対応する
                             is_percent = "%" in parts[1]
                             closest_stat_type = get_closest_stat_type(stat_type, stat_types)
                             sub_stats.append({"Type": closest_stat_type, "Value": stat_value, "Persent": is_percent})
