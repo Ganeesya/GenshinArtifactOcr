@@ -171,18 +171,14 @@ class Calculation:
               "元素熟知":"ELE",
               "元素チャージ効率":"CHG"
             }
-        main_type = artifact_data["Main"]["Type"]
-        main_type_raw = artifact_data["RawMainType"]
         if int( artifact_data.get("Level", 0)) == 20:
-            ret = f"{main_type} : {main_type_raw}\n"
-            ret += f"   : score\n"
+            ret = f"   : score\n"
             for score_type, score in future_stat.items():
                 scoreValue = score["score"]
                 ret += f"{show_score_type[score_type]}: {scoreValue:5.1f}\n"
             return ret
         else:
-            ret = f"{main_type} : {main_type_raw}\n"
-            ret += f"   : score\t: ave\t: max\n"
+            ret = f"   : score\t: ave\t: max\n"
             for score_type, score in future_stat.items():
                 scoreValue = score["score"]
                 scoreAve = score["average"]
